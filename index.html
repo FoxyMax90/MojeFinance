@@ -21,7 +21,7 @@ button{background:#22c55e;color:white;font-weight:bold}
 
 <div class="card">
 <h3>Kurz EUR / CZK</h3>
-<input id="kurz" type="number" step="0.001" placeholder="Např. 25.20" onchange="uloz();render()">
+<input id="kurz" type="number" step="0.001" value="25">
 <button onclick="nactiKurz()">Načíst aktuální kurz</button>
 <p class="small" id="kurzInfo">Kurz můžeš změnit i ručně.</p>
 </div>
@@ -35,18 +35,18 @@ button{background:#22c55e;color:white;font-weight:bold}
 <h3>Přidat položku</h3>
 
 <input id="datum" type="date">
-<input id="nazev" placeholder="Název: výplata, nákup, splátka...">
+<input id="nazev" placeholder="Název">
 
 <select id="typ">
 <option value="prijem">Příjem</option>
 <option value="vydaj">Výdaj</option>
-<option value="dluzim">Nový dluh - komu dlužím</option>
-<option value="splatkaMoje">Splátka mého dluhu</option>
+<option value="dluzim">Nový dluh</option>
+<option value="splatkaMoje">Splátka dluhu</option>
 <option value="dluzimi">Někdo mi dluží</option>
-<option value="vracenoMne">Někdo mi vrátil</option>
+<option value="vracenoMne">Vrátil mi</option>
 </select>
 
-<input id="osoba" placeholder="Osoba / firma">
+<input id="osoba" placeholder="Osoba">
 
 <div style="display:flex;gap:8px">
 <input id="castka" type="number" placeholder="Částka" style="width:65%">
@@ -56,180 +56,96 @@ button{background:#22c55e;color:white;font-weight:bold}
 </select>
 </div>
 
-<button onclick="pridat()">Přidat položku</button>
+<button onclick="pridat()">Přidat</button>
 </div>
 
 <div class="card">
-<h2>Přehled měsíce</h2>
-<p class="plus">Příjmy: <b id="sPrijem">0 Kč / 0 €</b></p>
-<p class="minus">Výdaje: <b id="sVydaj">0 Kč / 0 €</b></p>
-<p class="debt">Komu ještě dlužím: <b id="sDluzim">0 Kč / 0 €</b></p>
-<p class="plus">Kdo mi ještě dluží: <b id="sDluzimi">0 Kč / 0 €</b></p>
-<h2>Zůstatek: <span id="zustatek">0 Kč / 0 €</span></h2>
+<h2>Přehled</h2>
+<p>Příjmy: <b id="sPrijem"></b></p>
+<p>Výdaje: <b id="sVydaj"></b></p>
+<p>Dluhy: <b id="sDluzim"></b></p>
+<p>Pohledávky: <b id="sDluzimi"></b></p>
+<h2>Zůstatek: <span id="zustatek"></span></h2>
 </div>
 
 <div class="card">
-<h3>Seznam položek</h3>
 <div id="list"></div>
 </div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("mojeFinance")) || [];
-let ulozenyKurz = localStorage.getItem("kurzEurCzk") || 25;
-document.getElementById("kurz").value = ulozenyKurz;
-
-let dnes = new Date();
-let dnesText = dnes.toISOString().slice(0,10);
-let mesicText = dnes.toISOString().slice(0,7);
-
-document.getElementById("datum").value = dnesText;
-document.getElementById("mesic").value = mesicText;
-
-function zmenMesic(){
- let mesic = document.getElementById("mesic").value;
- if(mesic){
-  let den = String(dnes.getDate()).padStart(2,"0");
-  let noveDatum = mesic + "-" + den;
-
-  let test = new Date(noveDatum);
-  if(test.getMonth() + 1 !== Number(mesic.slice(5,7))){
-   noveDatum = mesic + "-01";
-  }
-
-  document.getElementById("datum").value = noveDatum;
- }
- render();
-}
+let data = JSON.parse(localStorage.getItem("finance")) || [];
 
 function kurz(){ return Number(document.getElementById("kurz").value) || 25; }
-function czkNaEur(czk){ return czk / kurz(); }
-function eurNaCzk(eur){ return eur * kurz(); }
+function eurNaCzk(e){ return e * kurz(); }
+function czkNaEur(c){ return c / kurz(); }
 
-function kc(n){ return Number(n).toLocaleString("cs-CZ",{maximumFractionDigits:0}) + " Kč"; }
-function eur(n){ return Number(n).toLocaleString("cs-CZ",{maximumFractionDigits:2}) + " €"; }
-function oboje(czk){ return kc(czk) + " / " + eur(czkNaEur(czk)); }
-
-function uloz(){
- localStorage.setItem("mojeFinance", JSON.stringify(data));
- localStorage.setItem("kurzEurCzk", kurz());
+function format(czk){
+ return czk.toFixed(0)+" Kč / "+czkNaEur(czk).toFixed(2)+" €";
 }
 
-async function nactiKurz(){
- try{
-  let r = await fetch("https://api.frankfurter.dev/v2/latest?base=EUR&symbols=CZK");
-  let j = await r.json();
-  if(j.rates && j.rates.CZK){
-   document.getElementById("kurz").value = j.rates.CZK;
-   document.getElementById("kurzInfo").innerText = "Načten kurz: 1 € = " + j.rates.CZK + " Kč";
-   uloz();
-   render();
-  }
- }catch(e){
-  document.getElementById("kurzInfo").innerText = "Kurz se nepodařilo načíst. Zadej ho ručně.";
- }
+function nactiKurz(){
+ fetch("https://api.frankfurter.app/latest?from=EUR&to=CZK")
+ .then(r=>r.json())
+ .then(d=>{
+  let k = d.rates.CZK;
+  document.getElementById("kurz").value = k;
+  document.getElementById("kurzInfo").innerText = "1 € = "+k+" Kč";
+  render();
+ })
+ .catch(()=>alert("Nepodařilo se načíst kurz"));
+}
+
+function zmenMesic(){
+ let m = document.getElementById("mesic").value;
+ document.getElementById("datum").value = m+"-01";
+ render();
 }
 
 function pridat(){
- let castka = Number(document.getElementById("castka").value);
  let mena = document.getElementById("mena").value;
- let castkaCZK = mena === "EUR" ? eurNaCzk(castka) : castka;
+ let castka = Number(document.getElementById("castka").value);
+ let czk = mena==="EUR"? eurNaCzk(castka):castka;
 
- let polozka = {
-  id: Date.now(),
-  datum: document.getElementById("datum").value,
-  mesic: document.getElementById("datum").value.slice(0,7),
-  nazev: document.getElementById("nazev").value,
-  typ: document.getElementById("typ").value,
-  osoba: document.getElementById("osoba").value,
-  castka: castka,
-  mena: mena,
-  castkaCZK: castkaCZK
- };
+ data.push({
+  id:Date.now(),
+  datum:document.getElementById("datum").value,
+  mesic:document.getElementById("datum").value.slice(0,7),
+  nazev:document.getElementById("nazev").value,
+  typ:document.getElementById("typ").value,
+  osoba:document.getElementById("osoba").value,
+  czk:czk
+ });
 
- if(!polozka.nazev || !polozka.castka){
-  alert("Napiš název a částku.");
-  return;
- }
-
- data.push(polozka);
- uloz();
-
- document.getElementById("nazev").value="";
- document.getElementById("osoba").value="";
- document.getElementById("castka").value="";
-
+ localStorage.setItem("finance",JSON.stringify(data));
  render();
 }
 
-function smazat(id){
- if(confirm("Smazat položku?")){
-  data = data.filter(x => x.id !== id);
-  uloz();
-  render();
- }
-}
-
 function render(){
- localStorage.setItem("kurzEurCzk", kurz());
+ let m = document.getElementById("mesic").value;
+ let f = data.filter(x=>x.mesic===m);
 
- let mesic = document.getElementById("mesic").value;
- let filt = data.filter(x => x.mesic === mesic);
-
- let prijem=0, vydaj=0;
- let novyDluh=0, splacenoMoje=0;
- let dluhMne=0, vracenoMne=0;
+ let prijem=0,vydaj=0,dluh=0,dluhMne=0,platby=0,vraceno=0;
  let html="";
 
- filt.forEach(x=>{
-  let c = x.castkaCZK || (x.mena==="EUR" ? eurNaCzk(x.castka) : x.castka);
+ f.forEach(x=>{
+  if(x.typ==="prijem") prijem+=x.czk;
+  if(x.typ==="vydaj") vydaj+=x.czk;
+  if(x.typ==="dluzim") dluh+=x.czk;
+  if(x.typ==="splatkaMoje"){ vydaj+=x.czk; platby+=x.czk;}
+  if(x.typ==="dluzimi") dluhMne+=x.czk;
+  if(x.typ==="vracenoMne"){ prijem+=x.czk; vraceno+=x.czk;}
 
-  if(x.typ==="prijem") prijem += c;
-  if(x.typ==="vydaj") vydaj += c;
-
-  if(x.typ==="dluzim") novyDluh += c;
-  if(x.typ==="splatkaMoje"){
-    splacenoMoje += c;
-    vydaj += c;
-  }
-
-  if(x.typ==="dluzimi") dluhMne += c;
-  if(x.typ==="vracenoMne"){
-    vracenoMne += c;
-    prijem += c;
-  }
-
-  let label = {
-   prijem:"Příjem",
-   vydaj:"Výdaj",
-   dluzim:"Nový dluh - komu dlužím",
-   splatkaMoje:"Splátka mého dluhu",
-   dluzimi:"Někdo mi dluží",
-   vracenoMne:"Někdo mi vrátil"
-  }[x.typ];
-
-  html += `
-  <div class="item">
-    <b>${x.nazev}</b><br>
-    <span class="small">${x.datum} • ${label}</span><br>
-    ${x.osoba ? "<span>Osoba/firma: "+x.osoba+"</span><br>" : ""}
-    <b>${x.castka} ${x.mena==="EUR" ? "€" : "Kč"}</b><br>
-    <span class="small">Přepočet: ${oboje(c)}</span><br>
-    <button onclick="smazat(${x.id})" style="background:#ef4444;margin-top:8px">Smazat</button>
-  </div>`;
+  html+=`<div class="item">${x.nazev} - ${format(x.czk)}</div>`;
  });
 
- let zbyvaDluzim = Math.max(0, novyDluh - splacenoMoje);
- let zbyvaDluzimi = Math.max(0, dluhMne - vracenoMne);
-
- document.getElementById("sPrijem").innerText = oboje(prijem);
- document.getElementById("sVydaj").innerText = oboje(vydaj);
- document.getElementById("sDluzim").innerText = oboje(zbyvaDluzim);
- document.getElementById("sDluzimi").innerText = oboje(zbyvaDluzimi);
- document.getElementById("zustatek").innerText = oboje(prijem - vydaj);
- document.getElementById("list").innerHTML = html || "Zatím tu nic není.";
+ document.getElementById("sPrijem").innerText=format(prijem);
+ document.getElementById("sVydaj").innerText=format(vydaj);
+ document.getElementById("sDluzim").innerText=format(Math.max(0,dluh-platby));
+ document.getElementById("sDluzimi").innerText=format(Math.max(0,dluhMne-vraceno));
+ document.getElementById("zustatek").innerText=format(prijem-vydaj);
+ document.getElementById("list").innerHTML=html;
 }
 
-nactiKurz();
 render();
 </script>
 
