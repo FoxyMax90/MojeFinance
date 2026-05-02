@@ -4,23 +4,67 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moje finance</title>
+<style>
+body{background:#111;color:#fff;font-family:sans-serif;padding:20px}
+input,button{padding:10px;margin:5px;border-radius:8px;border:none}
+button{background:#4CAF50;color:white}
+.item{margin:5px 0}
+</style>
 </head>
-<body style="background:#111;color:white;font-family:sans-serif;padding:20px;">
+<body>
+
 <h1>Moje finance 💰</h1>
 
-<p>Příjem: <input id="p" type="number"></p>
-<p>Výdaj: <input id="v" type="number"></p>
+<h3>Přidat příjem</h3>
+<input id="prijem" type="number" placeholder="Částka">
+<button onclick="addPrijem()">Přidat</button>
 
-<button onclick="spocitej()">Spočítat</button>
+<h3>Přidat výdaj</h3>
+<input id="vydaj" type="number" placeholder="Částka">
+<button onclick="addVydaj()">Přidat</button>
 
-<h2 id="vysledek"></h2>
+<h2 id="zustatek">Zůstatek: 0 Kč</h2>
+
+<h3>Historie</h3>
+<div id="list"></div>
 
 <script>
-function spocitej(){
- let p = Number(document.getElementById("p").value)||0;
- let v = Number(document.getElementById("v").value)||0;
- document.getElementById("vysledek").innerText = "Zůstatek: " + (p - v) + " Kč";
+let data = JSON.parse(localStorage.getItem("finance")) || [];
+
+function uloz(){
+ localStorage.setItem("finance", JSON.stringify(data));
 }
+
+function render(){
+ let sum = 0;
+ let html = "";
+ data.forEach(item=>{
+   sum += item.typ=="prijem" ? item.castka : -item.castka;
+   html += `<div class="item">${item.typ}: ${item.castka} Kč</div>`;
+ });
+ document.getElementById("zustatek").innerText = "Zůstatek: " + sum + " Kč";
+ document.getElementById("list").innerHTML = html;
+}
+
+function addPrijem(){
+ let v = Number(document.getElementById("prijem").value);
+ if(!v) return;
+ data.push({typ:"prijem", castka:v});
+ document.getElementById("prijem").value="";
+ uloz();
+ render();
+}
+
+function addVydaj(){
+ let v = Number(document.getElementById("vydaj").value);
+ if(!v) return;
+ data.push({typ:"vydaj", castka:v});
+ document.getElementById("vydaj").value="";
+ uloz();
+ render();
+}
+
+render();
 </script>
 
 </body>
