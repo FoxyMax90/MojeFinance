@@ -5,63 +5,143 @@
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Moje finance</title>
 <style>
-body{background:#111;color:#fff;font-family:sans-serif;padding:20px}
-input,button{padding:10px;margin:5px;border-radius:8px;border:none}
-button{background:#4CAF50;color:white}
-.item{margin:5px 0}
+body{background:#111;color:white;font-family:Arial;padding:15px}
+h1{color:#7dd3fc}
+input,select,button{width:100%;padding:12px;margin:6px 0;border-radius:10px;border:none;font-size:16px}
+button{background:#22c55e;color:white;font-weight:bold}
+.card{background:#1f2937;padding:12px;border-radius:14px;margin:10px 0}
+.item{background:#0f172a;padding:10px;border-radius:10px;margin:8px 0}
+.plus{color:#4ade80}.minus{color:#f87171}.debt{color:#facc15}
+.small{color:#aaa;font-size:13px}
 </style>
 </head>
 <body>
 
 <h1>Moje finance 💰</h1>
 
-<h3>Přidat příjem</h3>
-<input id="prijem" type="number" placeholder="Částka">
-<button onclick="addPrijem()">Přidat</button>
+<div class="card">
+<h3>Vyber měsíc</h3>
+<input id="mesic" type="month" onchange="render()">
+</div>
 
-<h3>Přidat výdaj</h3>
-<input id="vydaj" type="number" placeholder="Částka">
-<button onclick="addVydaj()">Přidat</button>
+<div class="card">
+<h3>Přidat položku</h3>
 
-<h2 id="zustatek">Zůstatek: 0 Kč</h2>
+<input id="datum" type="date">
+<input id="nazev" placeholder="Název: výplata, nákup, splátka...">
 
-<h3>Historie</h3>
+<select id="typ">
+<option value="prijem">Příjem</option>
+<option value="vydaj">Výdaj</option>
+<option value="dluzim">Komu dlužím</option>
+<option value="dluzimi">Kdo dluží mně</option>
+</select>
+
+<input id="osoba" placeholder="Osoba / firma (nepovinné)">
+<input id="castka" type="number" placeholder="Částka Kč">
+
+<button onclick="pridat()">Přidat položku</button>
+</div>
+
+<div class="card">
+<h2>Přehled měsíce</h2>
+<p class="plus">Příjmy: <b id="sPrijem">0 Kč</b></p>
+<p class="minus">Výdaje: <b id="sVydaj">0 Kč</b></p>
+<p class="debt">Komu dlužím: <b id="sDluzim">0 Kč</b></p>
+<p class="plus">Kdo dluží mně: <b id="sDluzimi">0 Kč</b></p>
+<h2>Zůstatek: <span id="zustatek">0 Kč</span></h2>
+</div>
+
+<div class="card">
+<h3>Seznam položek</h3>
 <div id="list"></div>
+</div>
 
 <script>
-let data = JSON.parse(localStorage.getItem("finance")) || [];
+let data = JSON.parse(localStorage.getItem("mojeFinance")) || [];
+
+let dnes = new Date();
+document.getElementById("datum").value = dnes.toISOString().slice(0,10);
+document.getElementById("mesic").value = dnes.toISOString().slice(0,7);
 
 function uloz(){
- localStorage.setItem("finance", JSON.stringify(data));
+ localStorage.setItem("mojeFinance", JSON.stringify(data));
+}
+
+function kc(n){
+ return Number(n).toLocaleString("cs-CZ") + " Kč";
+}
+
+function pridat(){
+ let polozka = {
+  id: Date.now(),
+  datum: document.getElementById("datum").value,
+  mesic: document.getElementById("datum").value.slice(0,7),
+  nazev: document.getElementById("nazev").value,
+  typ: document.getElementById("typ").value,
+  osoba: document.getElementById("osoba").value,
+  castka: Number(document.getElementById("castka").value)
+ };
+
+ if(!polozka.nazev || !polozka.castka){
+  alert("Napiš název a částku.");
+  return;
+ }
+
+ data.push(polozka);
+ uloz();
+
+ document.getElementById("nazev").value="";
+ document.getElementById("osoba").value="";
+ document.getElementById("castka").value="";
+
+ render();
+}
+
+function smazat(id){
+ if(confirm("Smazat položku?")){
+  data = data.filter(x => x.id !== id);
+  uloz();
+  render();
+ }
 }
 
 function render(){
- let sum = 0;
- let html = "";
- data.forEach(item=>{
-   sum += item.typ=="prijem" ? item.castka : -item.castka;
-   html += `<div class="item">${item.typ}: ${item.castka} Kč</div>`;
+ let mesic = document.getElementById("mesic").value;
+ let filt = data.filter(x => x.mesic === mesic);
+
+ let prijem=0, vydaj=0, dluzim=0, dluzimi=0;
+ let html="";
+
+ filt.forEach(x=>{
+  if(x.typ==="prijem") prijem += x.castka;
+  if(x.typ==="vydaj") vydaj += x.castka;
+  if(x.typ==="dluzim") dluzim += x.castka;
+  if(x.typ==="dluzimi") dluzimi += x.castka;
+
+  let label = {
+   prijem:"Příjem",
+   vydaj:"Výdaj",
+   dluzim:"Komu dlužím",
+   dluzimi:"Kdo dluží mně"
+  }[x.typ];
+
+  html += `
+  <div class="item">
+    <b>${x.nazev}</b><br>
+    <span class="small">${x.datum} • ${label}</span><br>
+    ${x.osoba ? "<span>Osoba/firma: "+x.osoba+"</span><br>" : ""}
+    <b>${kc(x.castka)}</b><br>
+    <button onclick="smazat(${x.id})" style="background:#ef4444;margin-top:8px">Smazat</button>
+  </div>`;
  });
- document.getElementById("zustatek").innerText = "Zůstatek: " + sum + " Kč";
- document.getElementById("list").innerHTML = html;
-}
 
-function addPrijem(){
- let v = Number(document.getElementById("prijem").value);
- if(!v) return;
- data.push({typ:"prijem", castka:v});
- document.getElementById("prijem").value="";
- uloz();
- render();
-}
-
-function addVydaj(){
- let v = Number(document.getElementById("vydaj").value);
- if(!v) return;
- data.push({typ:"vydaj", castka:v});
- document.getElementById("vydaj").value="";
- uloz();
- render();
+ document.getElementById("sPrijem").innerText = kc(prijem);
+ document.getElementById("sVydaj").innerText = kc(vydaj);
+ document.getElementById("sDluzim").innerText = kc(dluzim);
+ document.getElementById("sDluzimi").innerText = kc(dluzimi);
+ document.getElementById("zustatek").innerText = kc(prijem - vydaj);
+ document.getElementById("list").innerHTML = html || "Zatím tu nic není.";
 }
 
 render();
