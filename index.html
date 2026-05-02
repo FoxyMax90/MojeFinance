@@ -1,1 +1,27 @@
-# MojeFinance
+<!doctype html>
+<html lang="cs">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Moje finance</title>
+</head>
+<body style="background:#111;color:white;font-family:sans-serif;padding:20px;">
+<h1>Moje finance 💰</h1>
+
+<p>Příjem: <input id="p" type="number"></p>
+<p>Výdaj: <input id="v" type="number"></p>
+
+<button onclick="spocitej()">Spočítat</button>
+
+<h2 id="vysledek"></h2>
+
+<script>
+function spocitej(){
+ let p = Number(document.getElementById("p").value)||0;
+ let v = Number(document.getElementById("v").value)||0;
+ document.getElementById("vysledek").innerText = "Zůstatek: " + (p - v) + " Kč";
+}
+</script>
+
+</body>
+</html>
