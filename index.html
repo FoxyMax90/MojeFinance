@@ -35,6 +35,8 @@ button{background:#22c55e;color:white;font-weight:bold}
 <option value="vydaj">Výdaj</option>
 <option value="dluzim">Komu dlužím</option>
 <option value="dluzimi">Kdo dluží mně</option>
+<option value="splatkaMoje">Splátka mého dluhu</option>
+<option value="vracenoMne">Někdo mi vrátil</option>
 </select>
 
 <input id="osoba" placeholder="Osoba / firma (nepovinné)">
@@ -118,12 +120,16 @@ function render(){
   if(x.typ==="vydaj") vydaj += x.castka;
   if(x.typ==="dluzim") dluzim += x.castka;
   if(x.typ==="dluzimi") dluzimi += x.castka;
+  if(x.typ==="splatkaMoje") vydaj += x.castka;
+  if(x.typ==="vracenoMne") prijem += x.castka;
 
   let label = {
    prijem:"Příjem",
    vydaj:"Výdaj",
    dluzim:"Komu dlužím",
-   dluzimi:"Kdo dluží mně"
+   dluzimi:"Kdo dluží mně",
+   splatkaMoje:"Splátka mého dluhu",
+   vracenoMne:"Někdo mi vrátil"
   }[x.typ];
 
   html += `
